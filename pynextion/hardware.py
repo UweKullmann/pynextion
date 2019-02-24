@@ -4,7 +4,8 @@ from .events import (
     MsgEvent,
     StringHeadEvent,
     NumberHeadEvent,
-    CurrentPageIDHeadEvent
+    CurrentPageIDHeadEvent,
+    Event
 )
 from .hook import (
     NexComponents
@@ -28,11 +29,12 @@ def _format_cmd(cmd):
 class AbstractSerialNex:
     def __init__(self):
         self.components = NexComponents(self)
+        self.m_touchableList = []
 
     def write(self, cmd):
-        print("cmd --> %s" % cmd)
+        #print("cmd --> %s" % cmd)
         cmd = _format_cmd(cmd)
-        print("cmd --> %s" % cmd)
+        #print("cmd --> %s" % cmd)
         return self.sp.write(cmd)
 
     def init(self):
@@ -70,9 +72,9 @@ class AbstractSerialNex:
         self.write(cmd)
         time.sleep(0.1)
         msg = self.read_all()
-        print("msg <-- %s" % msg)
+        #print("msg <-- %s" % msg)
         evt = MsgEvent.parse(msg)
-        print("msg <-- %s" % evt)
+        #print("msg <-- %s" % evt)
         return evt
 
     def get_nex_string_command(self, cmd):
@@ -113,9 +115,20 @@ class AbstractSerialNex:
         return self.sp.close()
 
     def poll(self):
-        print("poll")
+        #print("poll")
         data = self.read_all()
         print("data: %s" % data)
+        if len(data) == 7:
+            if data[0] == Return.Code.EVENT_TOUCH_HEAD.value: #Touchevent received
+                if data[4] == 0xFF and data[5] == 0xFF and data[6] == 0xFF:
+                    for Touchable in self.m_touchableList:
+                        Touchable.process_event(data[1], data[2], Event.Touch(data[3]))
+
+    def registerTouchable(self, touchable):
+        print('register touch')
+        self.m_touchableList.append(touchable)
+
+
 
 
 if _HAS_PYSERIAL:
@@ -136,7 +149,8 @@ class NexSerialMock(AbstractSerialNex):
         return None
 
     def close(self):
-        print("close")
+        #print("close")
+        return None
 
 
 """
